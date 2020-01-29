@@ -39,8 +39,8 @@ const StyledModal = Modal.styled`
   transition: opacity ease 500ms;
 `;
 
-function ModalButton({label, children}) {
-  const [isOpen, setIsOpen, beforeOpen] = useState(false);
+function ModalButton(props) {
+  const [isOpen, setIsOpen] = useState(false);
   const [opacity, setOpacity] = useState(0);
 
   function toggleModal(e) {
@@ -63,7 +63,7 @@ function ModalButton({label, children}) {
 
   return (
     <div>
-      <span onClick={toggleModal}>{label}</span>
+      <span onClick={toggleModal}>{props.label}</span>
       <StyledModal
         isOpen={isOpen}
         afterOpen={afterOpen}
@@ -73,7 +73,7 @@ function ModalButton({label, children}) {
         opacity={opacity}
         backgroundProps={{ opacity }}>
         <ModalClose size="25" onClick={toggleModal} />
-        {children}
+        {props.children}
       </StyledModal>
     </div>
   );

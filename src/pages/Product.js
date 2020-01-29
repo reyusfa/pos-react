@@ -2,11 +2,12 @@ import React, { Component } from 'react';
 import tw from 'tailwind.macro';
 import styled from 'styled-components';
 import axios from 'axios';
-import qs from 'qs';
 import Modal, { ModalProvider } from 'styled-react-modal';
 import { FormInputData, FormLabel, FormContainer, FormInputGroup, FormButtonData } from '../components/Form';
 import { ModalButton, FadingBackground } from '../components/Modal';
 import { Delete, Edit, Info } from 'styled-icons/material';
+import { Navbar, NavItem, NavItemLink, NavSpacer, NavItemTitle, Layout, Container, SidebarContainer, Sidebar, SidebarItem, MainContainer } from '../components/Layout';
+import { AddBox } from 'styled-icons/material';
 
 const FormDelete = styled(Delete)`
   ${tw`
@@ -93,9 +94,37 @@ class Product extends Component {
     super(props);
     this.state = {
       dataProducts: [],
+      totalPages: 0,
+      limitPages: 10,
+      currentPage: 1,
       detailProduct: {},
+      newProduct: {},
+      search: '',
+      name: '',
+      sort: 'name.asc',
+      page: 1,
+      limit: 10,
       token: data ? JSON.parse(data).token : ''
     };
+  }
+  
+  async componentDidMount() {
+    await axios.get(`http://localhost:3001/products`, {
+      headers: { authorization: this.state.token }
+    }).then(res => {
+      if(res.data.status === 200) {
+        this.setState((prevState, props) => {
+          return {
+            ...prevState,
+            dataProducts: res.data.data,
+            totalPages: Math.ceil(res.data.data.length / this.state.limitPages) || 0
+          }
+        });
+        console.log(res.data.data.length);
+      } else {
+        console.log(res.data.error);
+      }
+    });
   }
   
   productDelete = async (id) => {
@@ -112,21 +141,40 @@ class Product extends Component {
     });
   }
   
+  onProductSubmit = async (event) => {
+    event.preventDefault();
+    const formData = new FormData();
+    formData.append('image', this.state.newProduct.image);
+    formData.append('name', this.state.newProduct.name);
+    formData.append('category_id', this.state.newProduct.category_id);
+    formData.append('price', this.state.newProduct.price);
+    formData.append('description', this.state.newProduct.description);
+    await axios.post(`http://localhost:3001/products`, formData, {
+      headers: {
+        authorization: this.state.token
+      }
+    }).then(res => {
+      if(res.data.status === 200) {
+        this.setState()
+      }
+      console.log(res.data);
+    }).catch(err => {
+      console.log(err);
+    });
+  }
+  
   productEdit = async (event, id) => {
     event.preventDefault();
-    const data = {
-      id: this.state.detailProduct.id,
-      name: this.state.detailProduct.name,
-      price: this.state.detailProduct.price,
-      description: this.state.detailProduct.description,
-      image: this.state.detailProduct.image
-    };
-    const body = qs.stringify(data);
+    const formData = new FormData();
+    formData.append('image', this.state.detailProduct.image);
+    formData.append('name', this.state.detailProduct.name);
+    formData.append('category_id', this.state.detailProduct.category_id);
+    formData.append('price', this.state.detailProduct.price);
+    formData.append('description', this.state.detailProduct.description);
     
-    await axios.put(`http://localhost:3001/products/${id}`, body, {
+    await axios.put(`http://localhost:3001/products/${id}`, formData, {
       headers: {
-        authorization: this.state.token,
-        'Content-Type': 'application/json'
+        authorization: this.state.token
       }
     }).then(res => {
       if(res.data.status === 200) {
@@ -144,6 +192,7 @@ class Product extends Component {
       headers: { authorization: this.state.token }
     }).then(res => {
       if(res.data.status === 200) {
+        this.setState({ detailProduct: {} });
         this.setState({ detailProduct: res.data.data });
       } else {
         console.log(res.data.error);
@@ -170,7 +219,17 @@ class Product extends Component {
     this.setState({
       detailProduct: {
         ...this.state.detailProduct,
-        image: event.target.value
+        image: event.target.files[0]
+      }
+    });
+  }
+  
+  onCategoryIdChange = (event) => {
+    event.preventDefault();
+    this.setState({
+      detailProduct: {
+        ...this.state.detailProduct,
+        category_id: event.target.value
       }
     });
   }
@@ -194,31 +253,191 @@ class Product extends Component {
       }
     });
   }
-  
-  onCategoryIdChange = (event) => {
+
+  onImageInput = (event) => {
     event.preventDefault();
     this.setState({
-      detailProduct: {
-        ...this.state.detailProduct,
+      newProduct: {
+        ...this.state.newProduct,
+        image: event.target.files[0]
+      }
+    });
+  }
+
+  onNameInput = (event) => {
+    event.preventDefault();
+    this.setState({
+      newProduct: {
+        ...this.state.newProduct,
+        name: event.target.value
+      }
+    });
+  }
+
+  onCategoryIdInput = (event) => {
+    event.preventDefault();
+    this.setState({
+      newProduct: {
+        ...this.state.newProduct,
         category_id: event.target.value
       }
     });
   }
-  
-  async componentDidMount() {
-    await axios.get('http://localhost:3001/products', {
-      headers: { authorization: this.state.token }
-    }).then(res => {
-      if(res.data.status === 200) {
-        this.setState({ dataProducts: res.data.data });
-      } else {
-        console.log(res.data.error);
+
+  onPriceInput = (event, value) => {
+    event.preventDefault();
+    this.setState({
+      newProduct: {
+        ...this.state.newProduct,
+        price: value
+      }
+    });
+  }
+
+  onDescriptionInput = (event) => {
+    event.preventDefault();
+    this.setState({
+      newProduct: {
+        ...this.state.newProduct,
+        description: event.target.value
       }
     });
   }
   
+  onProductSubmit = async (event) => {
+    event.preventDefault();
+    const formData = new FormData();
+    formData.append('image', this.state.newProduct.image);
+    formData.append('name', this.state.newProduct.name);
+    formData.append('category_id', this.state.newProduct.category_id);
+    formData.append('price', this.state.newProduct.price);
+    formData.append('description', this.state.newProduct.description);
+    await axios.post(`http://localhost:3001/products`, formData, {
+      headers: {
+        authorization: this.state.token
+      }
+    }).then(res => {
+      if(res.data.status === 200) {
+        this.setState({newProduct: []})
+      }
+      console.log(res.data);
+    }).catch(err => {
+      console.log(err);
+    });
+  }
+  
+  onRequestProducts = async ({ name, sort, limit }) => {
+    const _name = this.state.name || '';
+    const _sort = this.state.sort || 'name.asc';
+    const _page = this.state.page || 1;
+    const _limit = this.state.limit || 10;
+    if(_name && _name !== '') {
+      await axios.get(`http://localhost:3001/products?filter[name]=${_name}&sort=${_sort}&page=${_page}&limit=${_limit}`).then(res => {
+        this.setState((prevState, currentProps) => {
+          return {
+            ...prevState,
+            dataProducts: [...res.data.data]
+          }
+        });
+      });
+    } else {
+      await axios.get(`http://localhost:3001/products?sort=${_sort}&page=${_page}&limit=${_limit}`).then(res => {
+        this.setState((prevState, currentProps) => {
+          return {
+            ...prevState,
+            dataProducts: [...res.data.data]
+          }
+        });
+      });
+    }
+  }
+  
+  onSelectLimit = (event, limit) => {
+    event.preventDefault();
+    this.setState((prevState, currentProps) => {
+      return {
+        ...prevState,
+        limit: limit
+      }
+    });
+    this.onRequestProducts({ limit: this.state.limit })
+  }
+  
+  onSearch = async (event, { name, sort, limit }) => {
+    event.preventDefault();
+    const _name = name || '';
+    const _sort = sort || 'name.asc';
+    const _page = this.state.page || 1;
+    this.setState((prevState, currentProps) => {
+      return {
+        ...prevState,
+        limitPages: limit
+      }
+    });
+    const _limit = this.state.limitPages || 10;
+    if(_name && _name !== '') {
+      await axios.get(`http://localhost:3001/products?filter[name]=${_name}&sort=${_sort}&page=${_page}&limit=${_limit}`).then(res => {
+        this.setState((prevState, currentProps) => {
+          return {
+            ...prevState,
+            dataProducts: [...res.data.data],
+            limitPages: _limit
+          }
+        });
+      });
+    } else {
+      await axios.get(`http://localhost:3001/products?sort=${_sort}&page=${_page}&limit=${_limit}`).then(res => {
+        this.setState((prevState, currentProps) => {
+          return {
+            ...prevState,
+            dataProducts: [...res.data.data],
+            limitPages: _limit
+          }
+        });
+      });
+    }
+  }
+  
   render() {
-    console.log(this.state.token);
+    //console.log(this.state.totalPages);
+    const Pagination = () => {
+      let page = ''
+      for(let i = 1; i <= this.state.totalPages; i++) {
+        page = page + i;
+      }
+      return (page)
+    };
+    const Navigation = () => (
+      <Navbar>
+        <NavItem>
+          <NavItemTitle>Produk</NavItemTitle>
+        </NavItem>
+        <NavItem>
+          <ModalProvider backgroundComponent={FadingBackground}>
+            <ModalButton label={(<AddBox size="30" />)} ref={this.Modal}>
+              <FormContainer>
+                <FormInputGroup>
+                  <FormInputData type="file" name="image" handleChange={(event) => {this.onImageInput(event)}} />
+                </FormInputGroup>
+                <FormInputGroup>
+                  <FormInputData name="name" placeholder="Nama Produk" handleChange={(event) => this.onNameInput(event)} />
+                </FormInputGroup>
+                <FormInputGroup>
+                  <FormInputData name="category_id" placeholder="Kategori" handleChange={(event) => this.onCategoryIdInput(event)} />
+                </FormInputGroup>
+                <FormInputGroup>
+                  <FormInputData name="price" placeholder="Harga" handleChange={(event) => this.onPriceInput(event, event.target.value)} />
+                </FormInputGroup>
+                <FormInputGroup>
+                  <FormInputData name="description" placeholder="Deskripsi" handleChange={(event) => this.onDescriptionInput(event)} />
+                </FormInputGroup>
+                <FormButtonData label="Tambahkan" handleClick={(event) => this.onProductSubmit(event)} />
+              </FormContainer>
+            </ModalButton>
+          </ModalProvider>
+        </NavItem>
+      </Navbar>
+    );
     const products = this.state.dataProducts.map(product => {
       return (
         <Card key={product.id}>
@@ -227,30 +446,33 @@ class Product extends Component {
             <CardTitle>{product.name}</CardTitle>
             <CardAction>
               <CardActionItem>
-                <ModalButton label={(<FormInfo onClick={(event) => {this.productInfo(product.id)}} size="20" />)}>
-                  <FormContainer>
-                    <FormInputGroup>
-                      <img src={this.state.detailProduct.image} />
-                      <FormInputData type="file" name="image" handleChange={(event) => {this.onImageChange(event)}} />
-                    </FormInputGroup>
-                    <FormInputGroup>
-                      <FormInputData name="name" placeholder="Nama Produk" defaultValue={this.state.detailProduct.name} handleChange={(event) => {this.onNameChange(event)}} />
-                    </FormInputGroup>
-                    <FormInputGroup>
-                      <FormInputData name="category_id" placeholder="Kategori" defaultValue={this.state.detailProduct.category_id} handleChange={(event) => {this.onCategoryIdChange(event)}} />
-                    </FormInputGroup>
-                    <FormInputGroup>
-                      <FormInputData name="price" placeholder="Harga" defaultValue={this.state.detailProduct.price} handleChange={(event) => {this.onPriceChange(event)}} />
-                    </FormInputGroup>
-                    <FormInputGroup>
-                      <FormInputData name="description" placeholder="Deskripsi" defaultValue={this.state.detailProduct.description} handleChange={(event) => {this.onDescriptionChange(event)}} />
-                    </FormInputGroup>
-                    <FormButtonData handleClick={(event) => {this.productEdit(event, this.state.detailProduct.id)}} label="Edit" />
-                  </FormContainer>
-                </ModalButton>
+                <FormInfo onClick={ async (event) => { await this.productInfo(product.id)}} size="20" />
               </CardActionItem>
               <CardActionItem>
-                <FormEdit size="20" onClick={(event) => {this.productDelete(product.id)}} />
+                <ModalProvider backgroundComponent={FadingBackground}>
+                  <ModalButton label={(
+                  <FormEdit size="20" onClick={(event) => {this.productInfo(product.id)}} />)}>
+                    <FormContainer>
+                      <FormInputGroup>
+                        <img src={this.state.detailProduct.image} />
+                        <FormInputData type="file" name="image" handleChange={(event) => {this.onImageChange(event)}} />
+                      </FormInputGroup>
+                      <FormInputGroup>
+                        <FormInputData name="name" placeholder="Nama Produk" defaultValue={this.state.detailProduct.name} handleChange={(event) => {this.onNameChange(event)}} />
+                      </FormInputGroup>
+                      <FormInputGroup>
+                        <FormInputData name="category_id" placeholder="Kategori" defaultValue={this.state.detailProduct.category_id} handleChange={(event) => {this.onCategoryIdChange(event)}} />
+                      </FormInputGroup>
+                      <FormInputGroup>
+                        <FormInputData name="price" placeholder="Harga" defaultValue={this.state.detailProduct.price} handleChange={(event) => {this.onPriceChange(event)}} />
+                      </FormInputGroup>
+                      <FormInputGroup>
+                        <FormInputData name="description" placeholder="Deskripsi" defaultValue={this.state.detailProduct.description} handleChange={(event) => {this.onDescriptionChange(event)}} />
+                      </FormInputGroup>
+                      <FormButtonData handleClick={(event) => {this.productEdit(event, this.state.detailProduct.id)}} label="Edit" />
+                    </FormContainer>
+                  </ModalButton>
+                </ModalProvider>
               </CardActionItem>
               <CardActionItem>
                 <FormDelete size="20" onClick={(event) => {this.productDelete(product.id)}} />
@@ -261,207 +483,28 @@ class Product extends Component {
       );
     });
     return (
-      <CardContainer>
-        <ModalProvider backgroundComponent={FadingBackground}>
-        {products}
-        </ModalProvider>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-        <Card>
-          <CardItem>
-            <CardImage src="https://violetoon.com/wp-content/uploads/2018/09/placeholder-600x273.jpg" />
-            <CardTitle>Test</CardTitle>
-            <CardAction>
-              <CardActionItem>
-                <FormEdit size="20" />
-              </CardActionItem>
-              <CardActionItem>
-                <FormDelete size="20" />
-              </CardActionItem>
-            </CardAction>
-          </CardItem>
-        </Card>
-      </CardContainer>
+      <MainContainer>
+        <Navigation />
+        <CardContainer>
+          <select onChange={(event) => this.onSearch(event, {sort: event.target.value})}>
+            <option value="name.asc">Nama Produk (A - Z)</option>
+            <option value="name.desc">Nama Produk (Z - A)</option>
+            <option value="price.asc">Harga (0 - 9)</option>
+            <option value="price.desc">Harga (9 - 0)</option>
+          </select>
+          <select onChange={(event) => this.onSelectLimit(event, event.target.value)}>
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+          <FormInputData handleChange={(event) => this.onSearch(event, {search: event.target.value})} />
+          <ModalProvider backgroundComponent={FadingBackground}>
+          {products}
+          </ModalProvider>
+          <Pagination />
+        </CardContainer>
+      </MainContainer>
     );
   }
 }
